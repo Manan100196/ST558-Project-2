@@ -38,3 +38,65 @@ Tickers()
 ```{r}
 rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
 ```
+
+### Get the daily open, high, low, and close (OHLC) for the entire stocks/equities markets.
+```{r echo=TRUE,eval=TRUE}
+library(jsonlite)
+library(httr)
+library(tidyverse)
+
+mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
+groupedDaily<-function(date, adjusted=TRUE, include_otc=TRUE){
+  outputAPI<- fromJSON(mydata)
+  output<- outputAPI$date
+  if(date %in% output$millisecond){
+    output<- output %>%
+      filter(millisecond==date)
+  }
+  else if(date %in% output$YYYY-MM-DD){
+    output<- output %>%
+      filter(YYYY-MM-DD==date)
+  }
+    else{
+      message<- paste("ERROR: Argument for date was not found in either",
+                       "a date with the format a millisecond or YYYY-MM-DD.")
+      stop(message)
+    }
+  return(output)
+}
+```
+
+### Get the open, close and afterhours prices of a stock symbol on a certain date.
+```{r echo=TRUE,eval=TRUE}
+library(jsonlite)
+library(httr)
+library(tidyverse)
+
+mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
+dailyOpenClose<- function(types = "CS", dtae, adjusted=TRUE){
+  output<- fromJSON(mydata)
+output<- outputAPI$date
+  if(date %in% output$YYYY-MM-DD){
+    output<- output %>%
+      filter(YYYY-MM-DD==date)
+  }
+    else{
+      message<- paste("ERROR: Argument for date was not found in",
+                       "a date with the format YYYY-MM-DD.")
+      stop(message)
+    }
+  return(output)
+}
+```
+
+### Get the previous day's open, high, low, and close (OHLC) for the specified stock ticker.
+```{r echo=TRUE,eval=TRUE}
+library(jsonlite)
+library(httr)
+library(tidyverse)
+
+previousClose<- function(types = "CS", adjusted=TRUE){
+  output<- fromJSON(mydata)
+  return(output)
+}
+```
