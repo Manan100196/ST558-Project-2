@@ -1,28 +1,41 @@
 ---
-title: "Untitled"
-output: html_document
+title: "ST558_Project2_Group_2H"
+output: github_document
+author: "Manan Shah, Xi Yang"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(tidyverse)
+library(jsonlite)
+library(httr)
 ```
 
-## Including Plots
+```{r}
+Tickers <- function(type = "CS",market = "stocks",sort = "ticker", order = "asc", limit = 50){
+  
+  base <- "https://api.polygon.io/v3/reference/tickers?type="
+  type <- type
+  market <- market
+  sort <- sort
+  order <- order
+  limit <- limit
+  
+  url <- paste(base, type, "&market=", market, "&active=true&sort=", sort, "&order=", order, "&limit=", "&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7")
+  
+  data <- GET("https://api.polygon.io/v3/reference/tickers?type=CS&market=stocks&active=true&sort=ticker&order=asc&limit=10&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7")
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+  parsed <- fromJSON(rawToChar(data$content))
+  
+  return(as_tibble(parsed$results))
+}
+Tickers()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
+```
