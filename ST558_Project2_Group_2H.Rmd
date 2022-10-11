@@ -122,8 +122,6 @@ stock_price <- function(name_or_ticker, stock, from, to){
   base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
   
   url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
-  
-  #return(url)
 
   data <- GET(url)
 
