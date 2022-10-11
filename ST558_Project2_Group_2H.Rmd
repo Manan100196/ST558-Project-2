@@ -28,8 +28,14 @@ Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
   data <- GET(url)
   
   parsed <- fromJSON(rawToChar(data$content))
+  
+  # parsed$results <- parsed$results %>% drop_na(c("primary_exchange"))
+  
+  parsed$results <- as_tibble(parsed$results)
+  
+  parsed$results <- within(parsed$results, primary_exchange[market == "otc"] <- "OTC")
 
-  return(as_tibble(parsed$results))
+  return(parsed$results)
 }
 Tickers("ETF", "ticker", "asc", 50)
 ```
@@ -133,4 +139,28 @@ stock_price <- function(name_or_ticker, stock, from, to){
 stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
 ```
 
+EDA
+```{r}
+data <- list(Tickers("ETF", "ticker", "asc", 500), stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22"))
 
+data_new_variable <- data[[2]]
+Movement <- if_else(data_new_variable$o < data_new_variable$c, "Up", "Down")
+data_new_variable$Movement <- Movement
+data_new_variable
+
+contingency_data <- data[[1]]
+contingency_data$market <- as.factor(contingency_data$market)
+contingency_data$primary_exchange <- as.factor(contingency_data$primary_exchange)
+contingency_table <- table(contingency_data$market, contingency_data$primary_exchange)
+contingency_table
+
+data_1 <- data[[1]]
+bar_plot_data <- data_1 %>% count(primary_exchange)
+bar_plot <- ggplot(data = bar_plot_data, aes(primary_exchange, n)) + labs(y = "Count of ETF") + geom_bar(stat = "identity", fill = "steelblue")
+bar_plot
+
+data_2 <- data[[2]]
+hist_plot_data <- data_2 %>% select(o)
+hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = "Count") + geom_histogram(color="black", fill="grey")
+hist_plot
+```
