@@ -15,25 +15,40 @@ library(httr)
 ```
 
 ```{r}
-Tickers <- function(type="CS",market="stocks",sort="ticker",order="asc",limit=50){
+Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
   
   base <- "https://api.polygon.io/v3/reference/tickers?type="
   type <- type
-  market <- market
   sort <- sort
   order <- order
   limit <- limit
   
-  url <- paste(base,type,"&market=",market,"&active=true&sort=",sort,"&order=",order,"&limit=",limit,"&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7",sep="")
+  url <- paste(base,type,"&sort=",sort,"&order=",order,"&limit=",limit,"&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7",sep="")
 
   data <- GET(url)
-
+  
   parsed <- fromJSON(rawToChar(data$content))
 
   return(as_tibble(parsed$results))
 }
-Tickers()
+Tickers("ETF", "ticker", "asc", 50)
 ```
+
+```{r}
+ticker_from_names <- function(ticker_name){
+  data <- GET("https://api.polygon.io/v3/reference/tickers?active=true&sort=ticker&order=asc&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7")
+  
+  parsed <- fromJSON(rawToChar(data$content))
+
+  result <- as_tibble(parsed$results)
+
+  result <- result %>% filter(name == ticker_name)
+  
+  return(as.character(result[,c("ticker")]))
+}
+ticker_from_names("AAREAL BANK AG UNSP/ADR")
+```
+
 
 ```{r}
 rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
@@ -41,9 +56,6 @@ rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Gr
 
 ### Get the daily open, high, low, and close (OHLC) for the entire stocks/equities markets.
 ```{r echo=TRUE,eval=TRUE}
-library(jsonlite)
-library(httr)
-library(tidyverse)
 
 mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
 groupedDaily<-function(date, adjusted=TRUE, include_otc=TRUE){
@@ -68,9 +80,6 @@ groupedDaily<-function(date, adjusted=TRUE, include_otc=TRUE){
 
 ### Get the open, close and afterhours prices of a stock symbol on a certain date.
 ```{r echo=TRUE,eval=TRUE}
-library(jsonlite)
-library(httr)
-library(tidyverse)
 
 mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
 dailyOpenClose<- function(types = "CS", dtae, adjusted=TRUE){
@@ -91,12 +100,39 @@ output<- outputAPI$date
 
 ### Get the previous day's open, high, low, and close (OHLC) for the specified stock ticker.
 ```{r echo=TRUE,eval=TRUE}
-library(jsonlite)
-library(httr)
-library(tidyverse)
 
 previousClose<- function(types = "CS", adjusted=TRUE){
   output<- fromJSON(mydata)
   return(output)
 }
 ```
+
+```{r}
+stock_price <- function(name_or_ticker, stock, from, to){
+  x <- name_or_ticker
+  if (x == "name"){
+    ticker <- ticker_from_names(stock)
+  }
+  else{
+    ticker <- stock
+  }
+  
+  base_1 <- "https://api.polygon.io/v2/aggs/ticker/"
+  base_2 <- "/range/1/day/"
+  base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
+  
+  url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
+  
+  #return(url)
+
+  data <- GET(url)
+
+  parsed <- fromJSON(rawToChar(data$content))
+
+  return(as_tibble(parsed$results))
+
+}
+stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
+```
+
+
