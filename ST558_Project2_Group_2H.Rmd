@@ -60,7 +60,9 @@ ticker_from_names("AAREAL BANK AG UNSP/ADR")
 rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
 ```
 
-### 4 Get the daily open, high, low, and close (OHLC) for the entire stocks/equities markets.
+### groupedDaily
+I wrote a function groupedDaily for a user to interact with the market data endpoint of the finacial data API. It returns a data frame with key metrics (daily open, high, low, and close prices, movement between open and close price, etc.) for the entire stocks/equities markets. It accepts one argument, date, and the default value is “2022-10-07”. The user may enter date to get the data for a specific day. In order to be user friendly, I divided the input date into three parts:year, month, and day. It is easy to specify the options and user don't have to worry about the format of date. In addition, I thought there is no data during weekends, so I wrote a syntax to determine if it's a weekend. 
+
 ```{r echo=TRUE,eval=TRUE}
 library(jsonlite)
 library(httr)
@@ -101,7 +103,10 @@ if(grepl("S(at|un)", weekdays(Date))){
 }
 groupedDaily()
 ```  
-### 5 Get the previous day's open, high, low, and close (OHLC) for the specified stock ticker.
+
+### previousClose
+I wrote a function previousClose to allow the user to select a specified stock ticker of interest and receive the previous day's OHLC (open, high, low, and close) price for that stock ticker, as well as the number of transactions, the trading volume of the symbol, etc. It accepts one argument, stock ticker, and the default value is “AAPL”.
+
 ```{r echo=TRUE,eval=TRUE}
 library(jsonlite)
 library(httr)
@@ -178,6 +183,9 @@ line_plot
 ```
 
 ### EDA2
+
+Next, let’s pull a summary of the financial data for a special day by calling groupedDaily(). One of the most concerning aspects of financial data is whether the stock price has been up or down. I wanted to look at the average, standard deviation, median and IQR values of high price for both up movement stock and down movement stock in a special day. In the meantime, I chose the stock with the number of transaction greater than 100,000 times, which is more popular and attractive.
+
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
 groupedDaily() %>%
@@ -187,17 +195,22 @@ groupedDaily() %>%
   summarise(Avg=mean(h),Sd=sd(h),Median=median(h),IQR=IQR(h))
 ```
 
+Looks like the average, standard deviation, median and IQR values of high price for down movement stock is higher than up movement stock. It may imply that these down movement stocks have been on the rise for a while. Next, the stock price has fallen all the way after the opening of the market on a certain day. When this phenomenon occurs, investors should pay high attention to it. Therefore, once the stock price continues to fall in the market, investors should sell decisively.
+
+Below I created a scatter plot between number of transaction and low price. I would like to compare whether there is a linear relationship between the two variables. I still picked the stock with the number of transaction greater than 100,000 times.
 
 ```{r echo=TRUE, eval=TRUE}
 popularData<- groupedDaily() %>%
   filter(n>100000) %>%
   arrange(desc(n))
-popularData
 g<- ggplot(popularData, aes(x=l, y=n))
 g+geom_point(aes(col=n))+
   labs(title="Number of Transaction vs low price", x = "Low Price", y = "Number of Transactions")
 ```
 
+The pattern looks like not a strong and linear relationship bewteen number of transaction and low price. But I found that the low price on a special day of most stock is less than $150, and the number of transaction is less than 250,000 times. With the growth of price, the number of transaction is increasing.
+
+Then I looked at daily stock price compared among open, close, high, and low price, using a boxplot. I again dropped the stock with the number of transaction greater than 100,000 times for this plot. 
 
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
@@ -207,16 +220,11 @@ popularData<- groupedDaily() %>%
   arrange(desc(n)) %>%
   select(T,o,c,h,l) %>%
   pivot_longer(cols=2:5, names_to="OHLC", values_to="price")
-popularData
 g<- ggplot(popularData,aes(x=OHLC,y=price))
 g+ geom_boxplot()+
   geom_jitter(aes(col=OHLC))+
   labs(title="Boxplot for Price")
 ```
 
+This boxplot was interesting. I noticed that there is no significant difference among open, close, high, and low price. It explains that the market is very stable. The opening price is similar to the closing price which implies the shock amplitude of the entire trading day is also small, and the trading volume is appropriate. It is speculated that there are institutions entering, and it is unlikely that there will be large hot money entering.
 
-```{r echo=TRUE, eval=TRUE}
-library(quantmod)
-getSymbols("AAPL") 
-chartSeries(AAPL)
-```
