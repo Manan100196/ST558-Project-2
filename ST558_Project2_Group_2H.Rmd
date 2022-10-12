@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(jsonlite)
 library(httr)
+library(plotly)
 ```
 
 ```{r}
@@ -90,10 +91,13 @@ if(grepl("S(at|un)", weekdays(Date))){
   stop(message)
 }
   else{
-    url <- paste(base,Date,"?adjusted=true&include_otc=true&apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma",sep="")
+    url <- paste(base,Date,"?adjusted=true&apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma",sep="")
   data <- GET(url)
   parsed <- fromJSON(rawToChar(data$content))
-  return(as_tibble(parsed$results))
+  result <- as_tibble(parsed$results)
+  Movement <- if_else(result$o <  result$c, "Up", "Down")
+  result$Movement <- Movement
+  return(result)
   }
 }
 groupedDaily()
@@ -115,6 +119,28 @@ previousClose<-function(stockTicker="AAPL"){
 }
 previousClose()
 ``` 
+
+```{r}
+stock_price <- function(name_or_ticker, stock, from, to){
+  x <- name_or_ticker
+  if (x == "name"){
+    ticker <- ticker_from_names(stock)
+  }
+  else{
+    ticker <- stock
+  }
+  
+  base_1 <- "https://api.polygon.io/v2/aggs/ticker/"
+  base_2 <- "/range/1/day/"
+  base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
+  
+  url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
+  data <- GET(url)
+  parsed <- fromJSON(rawToChar(data$content))
+  return(as_tibble(parsed$results))
+}
+stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
+```
 
 EDA
 ```{r}
@@ -141,28 +167,34 @@ hist_plot_data <- data_2 %>% select(o)
 hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = "Count") + geom_histogram(color="black", fill="grey")
 hist_plot
 
+data_3 <- data_new_variable
+box_plot_data <- data_3 %>% select(Movement, o)
+box_plot <- ggplot(box_plot_data, aes(x = Movement, y = o))  + labs(title = "Boxplot for Movement") + geom_boxplot()
+box_plot
 
+data_4 <- data[[2]]
+candlestick_plot_data <- mutate(data_4, date =  as.POSIXct(data_4$t/1000, origin="1970-01-01"))
+candlestick_plot_data
+candlestick_plot <- candlestick_plot_data %>% plot_ly(x = date, type = "candlestick", open = o, close = c, high = h, low = l)
 ```
 ### EDA2
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
 groupedDaily() %>%
   filter(n>=100000) %>%
+  group_by(Movement) %>%
   arrange(desc(n)) %>% 
   summarise(Avg=mean(h),Sd=sd(h),Median=median(h),IQR=IQR(h))
 ```
 
 
 ```{r echo=TRUE, eval=TRUE}
-library(tidyverse)
-library("ggplot2")
-
 popularData<- groupedDaily() %>%
   filter(n>100000) %>%
   arrange(desc(n))
 popularData
-g<- ggplot(popularData, aes(x=l, y=h))
+g<- ggplot(popularData, aes(x=l, y=n))
 g+geom_point(aes(col=n))+
-  geom_smooth(method=lm,col="pink")+
-  labs(title="high price vs low price")
+  labs(title="Number of Transaction vs low price", x = "Low Price", y = "Number of Transactions")
 ```
+
