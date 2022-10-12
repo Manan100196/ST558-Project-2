@@ -8,15 +8,19 @@ author: "Manan Shah, Xi Yang"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**Importing the required packages**
+# **Required package list**
+
 ```{r}
 library(tidyverse)
 library(jsonlite)
 library(httr)
 ```
 
-**Tickers Function**
 
+# **Functions to query endpoint along with modification**
+
+## **Tickers function**
+The tickers function is used to obtained information of all ticker for a particular market. By default, the market is common stock. The data is by default sorted by ticker in ascending order with limit 10. Also, it is observed that the OTC market does not have exchange. So, primary_exchange variable is updated with OTC if it is an OTC market.  
 ```{r}
 Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
   
@@ -32,8 +36,6 @@ Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
   
   parsed <- fromJSON(rawToChar(data$content))
   
-  # parsed$results <- parsed$results %>% drop_na(c("primary_exchange"))
-  
   parsed$results <- as_tibble(parsed$results)
   
   parsed$results <- within(parsed$results, primary_exchange[market == "otc"] <- "OTC")
@@ -43,6 +45,8 @@ Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
 Tickers("ETF", "ticker", "asc", 50)
 ```
 
+## **ticker_from_names function**
+In this function, if user inputs the name of financial product, its ticker will be returned. This function is used in stock_price function.
 ```{r}
 ticker_from_names <- function(ticker_name){
   data <- GET("https://api.polygon.io/v3/reference/tickers?active=true&sort=ticker&order=asc&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7")
@@ -58,18 +62,33 @@ ticker_from_names <- function(ticker_name){
 ticker_from_names("AAREAL BANK AG UNSP/ADR")
 ```
 
-
+## **stock_price**
+This function provides information of a particular stock provided by the user. Also, the stock name of ticker can be provided. If user provides stock name, the ticker will be obtained from ticker_from_names function. Also, the output can be modified based on from and to date provided. 
 ```{r}
-rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
+stock_price <- function(name_or_ticker, stock, from, to){
+  x <- name_or_ticker
+  if (x == "name"){
+    ticker <- ticker_from_names(stock)
+  }
+  else{
+    ticker <- stock
+  }
+  
+  base_1 <- "https://api.polygon.io/v2/aggs/ticker/"
+  base_2 <- "/range/1/day/"
+  base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
+  
+  url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
+  data <- GET(url)
+  parsed <- fromJSON(rawToChar(data$content))
+  return(as_tibble(parsed$results))
+}
+stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
 ```
 
-### groupedDaily
-I wrote a function groupedDaily for a user to interact with the market data endpoint of the finacial data API. It returns a data frame with key metrics (daily open, high, low, and close prices, movement between open and close price, etc.) for the entire stocks/equities markets. It accepts one argument, date, and the default value is “2022-10-07”. The user may enter date to get the data for a specific day. In order to be user friendly, I divided the input date into three parts:year, month, and day. It is easy to specify the options and user don't have to worry about the format of date. In addition, I thought there is no data during weekends, so I wrote a syntax to determine if it's a weekend. 
-
+## **groupedDaily**
+groupedDaily is a user function to interact with the market data endpoint of the finacial data API. It returns a data frame with key metrics (daily open, high, low, and close prices, movement between open and close price, etc.) for the entire stocks/equities markets. It accepts one argument, date, and the default value is “2022-10-07”. The user may enter date to get the data for a specific day. In order to be user friendly, the input date is divided into three parts:year, month, and day. It is easy to specify the options and user don't have to worry about the format of date. In addition, as there is no data during weekends, the function has a syntax to determine if it's a weekend. 
 ```{r echo=TRUE,eval=TRUE}
-library(jsonlite)
-library(httr)
-library(tidyverse)
 groupedDaily<-function(year=2022, month=10, day=07){
   #Define base combination in url
   base <- "https://api.polygon.io/v2/aggs/grouped/locale/us/market/stocks/"
@@ -107,14 +126,10 @@ if(grepl("S(at|un)", weekdays(Date))){
 groupedDaily()
 ```  
 
-### previousClose
-I wrote a function previousClose to allow the user to select a specified stock ticker of interest and receive the previous day's OHLC (open, high, low, and close) price for that stock ticker, as well as the number of transactions, the trading volume of the symbol, etc. It accepts one argument, stock ticker, and the default value is “AAPL”.
-
+## **previousClose**
+previousClose allows the user to select a specified stock ticker of interest and receive the previous day's OHLC (open, high, low, and close) price for that stock ticker, as well as the number of transactions, the trading volume of the symbol, etc. It accepts one argument, stock ticker, and the default value is “AAPL”.
 ```{r echo=TRUE,eval=TRUE}
-library(jsonlite)
-library(httr)
-library(tidyverse)
-previousClose<-function(stockTicker="AAPL"){
+previousClose <- function(stockTicker="AAPL"){
   #Define base combination in url
   base <- "https://api.polygon.io/v2/aggs/ticker/"
   #Define stockTiker Input
@@ -127,68 +142,42 @@ previousClose<-function(stockTicker="AAPL"){
 previousClose()
 ``` 
 
-```{r}
-stock_price <- function(name_or_ticker, stock, from, to){
-  x <- name_or_ticker
-  if (x == "name"){
-    ticker <- ticker_from_names(stock)
-  }
-  else{
-    ticker <- stock
-  }
-  
-  base_1 <- "https://api.polygon.io/v2/aggs/ticker/"
-  base_2 <- "/range/1/day/"
-  base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
-  
-  url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
-  data <- GET(url)
-  parsed <- fromJSON(rawToChar(data$content))
-  return(as_tibble(parsed$results))
-}
-stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
-```
 
-EDA
+# **Creation of new relevant variables after obtaining data**
+
+## **Data source and new varaible**
+Creating a data source which is an independent combination of ETF Tickers and AAPL stock price.
 ```{r}
 data <- list(Tickers("ETF", "ticker", "asc", 500), stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22"))
+```
 
+Using stock price data of AAPL, we have created variable movement which determines whether there is an up movement or down movement for a particular day.
+```{r}
 data_new_variable <- data[[2]]
 Movement <- if_else(data_new_variable$o < data_new_variable$c, "Up", "Down")
 data_new_variable$Movement <- Movement
 data_new_variable
+```
 
+
+# **Contingency tables**
+
+## **Two way contigency table**
+A two way contingency table for tickers data is created. First, we create factors or market and primary_exchange column. Next, we create a contingency table using table function.
+```{r}
 contingency_data <- data[[1]]
 contingency_data$market <- as.factor(contingency_data$market)
 contingency_data$primary_exchange <- as.factor(contingency_data$primary_exchange)
 contingency_table <- table(contingency_data$market, contingency_data$primary_exchange)
 contingency_table
-
-data_1 <- data[[1]]
-bar_plot_data <- data_1 %>% count(primary_exchange)
-bar_plot <- ggplot(data = bar_plot_data, aes(primary_exchange, n)) + labs(y = "Count of ETF") + geom_bar(stat = "identity", fill = "steelblue")
-bar_plot
-
-data_2 <- data[[2]]
-hist_plot_data <- data_2 %>% select(o)
-hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = "Count") + geom_histogram(color="black", fill="grey")
-hist_plot
-
-data_3 <- data_new_variable
-box_plot_data <- data_3 %>% select(Movement, o)
-box_plot <- ggplot(box_plot_data, aes(x = Movement, y = o))  + labs(title = "Boxplot for Movement") + geom_boxplot()
-box_plot
-
-data_4 <- data[[2]]
-line_plot_data <- mutate(data_4, date =  as.POSIXct(data_4$t/1000, origin="1970-01-01"))
-line_plot <- ggplot(line_plot_data, aes(date, o)) + geom_line()
-line_plot
 ```
 
-### EDA2
 
-Next, let’s pull a summary of the financial data for a special day by calling groupedDaily(). One of the most concerning aspects of financial data is whether the stock price has been up or down. I wanted to look at the average, standard deviation, median and IQR values of high price for both up movement stock and down movement stock in a special day. In the meantime, I chose the stock with the number of transaction greater than 100,000 times, which is more popular and attractive.
+# **Numerical summaries across variables**
 
+## **Numerical summary of categorical variable movement**
+Next, let’s pull a summary of the financial data for a special day by calling groupedDaily(). One of the most concerning aspects of financial data is whether the stock price has been up or down. I wanted to look at the average, standard deviation, median and IQR values of high price for both up movement stock and down movement stock in a day. In the meantime, the stock with the number of transaction greater than 100,000 times is selected assuming it more popular and attractive.
+Looks like the average, standard deviation, median and IQR values of high price for down movement stock is higher than up movement stock. It may imply that these down movement stocks have been on the rise for a while. Next, the stock price has fallen all the way after the opening of the market on a certain day. When this phenomenon occurs, investors should pay high attention to it. Therefore, once the stock price continues to fall in the market, investors should sell decisively.
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
 groupedDaily() %>%
@@ -198,10 +187,42 @@ groupedDaily() %>%
   summarise(Avg=mean(h),Sd=sd(h),Median=median(h),IQR=IQR(h))
 ```
 
-Looks like the average, standard deviation, median and IQR values of high price for down movement stock is higher than up movement stock. It may imply that these down movement stocks have been on the rise for a while. Next, the stock price has fallen all the way after the opening of the market on a certain day. When this phenomenon occurs, investors should pay high attention to it. Therefore, once the stock price continues to fall in the market, investors should sell decisively.
 
-Below I created a scatter plot between number of transaction and low price. I would like to compare whether there is a linear relationship between the two variables. I still picked the stock with the number of transaction greater than 100,000 times.
+# **Plots**
 
+## **Bar plot**
+Here, we created bar plot of categorical variable primary_exchange vs quantitative variable number of ETF traded on exchange. 
+We conclude that ARCX is most active exchange and nearly 50 percent of ETF are traded in ARCX. The other exchange where ETF are traded extensively are in order XNAS, BATS and OTC.
+```{r}
+data_1 <- data[[1]]
+bar_plot_data <- data_1 %>% count(primary_exchange)
+bar_plot <- ggplot(data = bar_plot_data, aes(primary_exchange, n)) + labs(y = "Count of ETF") + geom_bar(stat = "identity", fill = "steelblue")
+bar_plot
+```
+
+## **Histogram plot**
+Here, we plot a histogram of quantitative variable open price. Each bar shows the number of times open price falls in the range of the bar created.
+From the plot, we conclude that the stock's open price is mainly in the range of 145 to 150.
+```{r}
+data_2 <- data[[2]]
+hist_plot_data <- data_2 %>% select(o)
+hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = "Count") + geom_histogram(color="black", fill="grey")
+hist_plot
+```
+
+## **Line plot**
+First, a new column date is created which converts the unix millisecond date time into date. Later, we create line plot for the movement of stock price against date.
+The graph says that there was highest volatility in stock price from 1st September to 15th September.
+```{r}
+data_4 <- data[[2]]
+line_plot_data <- mutate(data_4, date =  as.POSIXct(data_4$t/1000, origin="1970-01-01"))
+line_plot <- ggplot(line_plot_data, aes(date, o)) + geom_line()
+line_plot
+```
+
+## **Scatter Plot**
+Below, a scatter plot is created between number of transaction and low price. The goal was to compare whether there is a linear relationship between the two variables. The stock with the number of transaction greater than 100,000 times are selected here as well.
+The pattern looks like there is not a strong linear relationship bewteen number of transaction and low price. But, the conclusion is low price on a special day of most stock is less than $150, and the number of transaction is less than 250,000 times. With the growth of price, the number of transaction is increasing.
 ```{r echo=TRUE, eval=TRUE}
 popularData<- groupedDaily() %>%
   filter(n>100000) %>%
@@ -211,10 +232,9 @@ g+geom_point(aes(col=n))+
   labs(title="Number of Transaction vs low price", x = "Low Price", y = "Number of Transactions")
 ```
 
-The pattern looks like not a strong and linear relationship bewteen number of transaction and low price. But I found that the low price on a special day of most stock is less than $150, and the number of transaction is less than 250,000 times. With the growth of price, the number of transaction is increasing.
-
-Then I looked at daily stock price compared among open, close, high, and low price, using a boxplot. I again dropped the stock with the number of transaction greater than 100,000 times for this plot. 
-
+## **Box plot**
+The daily stock price is compared among open, close, high, and low price, using a boxplot. Here, the stock with the number of transaction greater than 100,000 times were dropped for this plot. 
+This boxplot was interesting. There is no significant difference among open, close, high, and low price. It explains that the market is very stable. The opening price is similar to the closing price which implies the shock amplitude of the entire trading day is also small, and the trading volume is appropriate. It is speculated that there are institutions entering, and it is unlikely that there will be large hot money entering.
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
 library("ggplot2")
@@ -228,6 +248,3 @@ g+ geom_boxplot()+
   geom_jitter(aes(col=OHLC))+
   labs(title="Boxplot for Price")
 ```
-
-This boxplot was interesting. I noticed that there is no significant difference among open, close, high, and low price. It explains that the market is very stable. The opening price is similar to the closing price which implies the shock amplitude of the entire trading day is also small, and the trading volume is appropriate. It is speculated that there are institutions entering, and it is unlikely that there will be large hot money entering.
-
