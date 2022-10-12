@@ -198,3 +198,25 @@ g+geom_point(aes(col=n))+
   labs(title="Number of Transaction vs low price", x = "Low Price", y = "Number of Transactions")
 ```
 
+
+```{r echo=TRUE, eval=TRUE}
+library(tidyverse)
+library("ggplot2")
+popularData<- groupedDaily() %>%
+  filter(n>100000) %>%
+  arrange(desc(n)) %>%
+  select(T,o,c,h,l) %>%
+  pivot_longer(cols=2:5, names_to="OHLC", values_to="price")
+popularData
+g<- ggplot(popularData,aes(x=OHLC,y=price))
+g+ geom_boxplot()+
+  geom_jitter(aes(col=OHLC))+
+  labs(title="Boxplot for Price")
+```
+
+
+```{r echo=TRUE, eval=TRUE}
+library(quantmod)
+getSymbols("AAPL") 
+chartSeries(AAPL)
+```
