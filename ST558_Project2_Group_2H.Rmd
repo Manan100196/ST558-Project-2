@@ -60,84 +60,61 @@ ticker_from_names("AAREAL BANK AG UNSP/ADR")
 rmarkdown::render(input = "ST558_Project2_Group_2H.Rmd", output_file = "ST558_Group_2H.md")
 ```
 
-### Get the daily open, high, low, and close (OHLC) for the entire stocks/equities markets.
+### 4 Get the daily open, high, low, and close (OHLC) for the entire stocks/equities markets.
 ```{r echo=TRUE,eval=TRUE}
-
-mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
-groupedDaily<-function(date, adjusted=TRUE, include_otc=TRUE){
-  outputAPI<- fromJSON(mydata)
-  output<- outputAPI$date
-  if(date %in% output$millisecond){
-    output<- output %>%
-      filter(millisecond==date)
-  }
-  else if(date %in% output$YYYY-MM-DD){
-    output<- output %>%
-      filter(YYYY-MM-DD==date)
-  }
-    else{
-      message<- paste("ERROR: Argument for date was not found in either",
-                       "a date with the format a millisecond or YYYY-MM-DD.")
-      stop(message)
-    }
-  return(output)
-}
-```
-
-### Get the open, close and afterhours prices of a stock symbol on a certain date.
-```{r echo=TRUE,eval=TRUE}
-
-mydata<- GET("https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2020-06-01/2020-06-17?apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma")
-dailyOpenClose<- function(types = "CS", dtae, adjusted=TRUE){
-  output<- fromJSON(mydata)
-output<- outputAPI$date
-  if(date %in% output$YYYY-MM-DD){
-    output<- output %>%
-      filter(YYYY-MM-DD==date)
-  }
-    else{
-      message<- paste("ERROR: Argument for date was not found in",
-                       "a date with the format YYYY-MM-DD.")
-      stop(message)
-    }
-  return(output)
-}
-```
-
-### Get the previous day's open, high, low, and close (OHLC) for the specified stock ticker.
-```{r echo=TRUE,eval=TRUE}
-
-previousClose<- function(types = "CS", adjusted=TRUE){
-  output<- fromJSON(mydata)
-  return(output)
-}
-```
-
-```{r}
-stock_price <- function(name_or_ticker, stock, from, to){
-  x <- name_or_ticker
-  if (x == "name"){
-    ticker <- ticker_from_names(stock)
+library(jsonlite)
+library(httr)
+library(tidyverse)
+groupedDaily<-function(year=2022, month=10, day=07){
+  #Define base combination in url
+  base <- "https://api.polygon.io/v2/aggs/grouped/locale/us/market/stocks/"
+  #Define Year Input
+  Year<-as.character(year)
+  #Define Month Input
+  if(month<10){
+    Month<-paste("0",as.character(month),sep="")
   }
   else{
-    ticker <- stock
+    Month<-as.character(month)
   }
-  
-  base_1 <- "https://api.polygon.io/v2/aggs/ticker/"
-  base_2 <- "/range/1/day/"
-  base_3 <- "?adjusted=true&limit=50&apiKey=OSOTVVjvsUEE8FFAyyX0n3XnWMpFdZv7"
-  
-  url <- paste(base_1, ticker, base_2, from, "/", to, base_3, sep = "")
-
-  data <- GET(url)
-
-  parsed <- fromJSON(rawToChar(data$content))
-
-  return(as_tibble(parsed$results))
-
+  #Define Day Input
+    if(day<10){
+    Day<-paste("0",as.character(day),sep="")
+  }
+  else{
+    Day<-as.character(day)
+  }
+  Date<-as.Date(paste(Year,Month,Day,sep="-"))
+if(grepl("S(at|un)", weekdays(Date))){
+   message<- paste("ERROR: The input date is a weekend, there is no data available")
+  stop(message)
 }
-stock_price("ticker", "AAPL", "2021-07-22", "2022-07-22")
-```
+  else{
+    url <- paste(base,Date,"?adjusted=true&include_otc=true&apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma",sep="")
+  data <- GET(url)
+  parsed <- fromJSON(rawToChar(data$content))
+  return(as_tibble(parsed$results))
+  }
+}
+groupedDaily()
+```  
+### 5 Get the previous day's open, high, low, and close (OHLC) for the specified stock ticker.
+```{r echo=TRUE,eval=TRUE}
+library(jsonlite)
+library(httr)
+library(tidyverse)
+previousClose<-function(stockTicker="AAPL"){
+  #Define base combination in url
+  base <- "https://api.polygon.io/v2/aggs/ticker/"
+  #Define stockTiker Input
+  StockTicker<-stockTicker
+    url <- paste(base,StockTicker,"/prev?adjusted=true&apiKey=woI7TWx23Hf4JkX9Rghf7tvlpaF3jVma",sep="")
+  data <- GET(url)
+  parsed <- fromJSON(rawToChar(data$content))
+  return(as_tibble(parsed$results))
+}
+previousClose()
+``` 
 
 EDA
 ```{r}
@@ -165,4 +142,27 @@ hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = 
 hist_plot
 
 
+```
+### EDA2
+```{r echo=TRUE, eval=TRUE}
+library(tidyverse)
+groupedDaily() %>%
+  filter(n>=100000) %>%
+  arrange(desc(n)) %>% 
+  summarise(Avg=mean(h),Sd=sd(h),Median=median(h),IQR=IQR(h))
+```
+
+
+```{r echo=TRUE, eval=TRUE}
+library(tidyverse)
+library("ggplot2")
+
+popularData<- groupedDaily() %>%
+  filter(n>100000) %>%
+  arrange(desc(n))
+popularData
+g<- ggplot(popularData, aes(x=l, y=h))
+g+geom_point(aes(col=n))+
+  geom_smooth(method=lm,col="pink")+
+  labs(title="high price vs low price")
 ```
