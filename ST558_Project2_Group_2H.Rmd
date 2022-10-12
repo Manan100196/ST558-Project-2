@@ -8,11 +8,14 @@ author: "Manan Shah, Xi Yang"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+**Importing the required packages**
 ```{r}
 library(tidyverse)
 library(jsonlite)
 library(httr)
 ```
+
+**Tickers Function**
 
 ```{r}
 Tickers <- function(type="CS",sort="ticker",order="asc",limit=10){
