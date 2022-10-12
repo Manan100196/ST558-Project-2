@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(jsonlite)
 library(httr)
-library(plotly)
 ```
 
 ```{r}
@@ -171,11 +170,6 @@ data_3 <- data_new_variable
 box_plot_data <- data_3 %>% select(Movement, o)
 box_plot <- ggplot(box_plot_data, aes(x = Movement, y = o))  + labs(title = "Boxplot for Movement") + geom_boxplot()
 box_plot
-
-data_4 <- data[[2]]
-candlestick_plot_data <- mutate(data_4, date =  as.POSIXct(data_4$t/1000, origin="1970-01-01"))
-candlestick_plot_data
-candlestick_plot <- candlestick_plot_data %>% plot_ly(x = date, type = "candlestick", open = o, close = c, high = h, low = l)
 ```
 ### EDA2
 ```{r echo=TRUE, eval=TRUE}
