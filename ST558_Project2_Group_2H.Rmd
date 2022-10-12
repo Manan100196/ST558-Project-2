@@ -163,4 +163,6 @@ data_2 <- data[[2]]
 hist_plot_data <- data_2 %>% select(o)
 hist_plot <- ggplot(data = hist_plot_data, aes(o)) + labs(x = "Open Price", y = "Count") + geom_histogram(color="black", fill="grey")
 hist_plot
+
+
 ```
