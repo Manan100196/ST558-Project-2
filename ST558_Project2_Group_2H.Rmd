@@ -170,7 +170,13 @@ data_3 <- data_new_variable
 box_plot_data <- data_3 %>% select(Movement, o)
 box_plot <- ggplot(box_plot_data, aes(x = Movement, y = o))  + labs(title = "Boxplot for Movement") + geom_boxplot()
 box_plot
+
+data_4 <- data[[2]]
+line_plot_data <- mutate(data_4, date =  as.POSIXct(data_4$t/1000, origin="1970-01-01"))
+line_plot <- ggplot(line_plot_data, aes(date, o)) + geom_line()
+line_plot
 ```
+
 ### EDA2
 ```{r echo=TRUE, eval=TRUE}
 library(tidyverse)
